@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # =========================================================
-# PAGE CONFIG
+# PAGE SETTINGS
 # =========================================================
 
 st.set_page_config(
@@ -12,17 +12,19 @@ st.set_page_config(
 )
 
 # =========================================================
-# API SETTINGS
+# API KEY
 # =========================================================
 
-# Put your NEW Gemini API key here
+# For testing, paste your NEW Gemini API key here.
+# Do NOT paste your API key into this chat.
+
 GEMINI_API_KEY = "PASTE_YOUR_NEW_API_KEY_HERE"
 
-MODEL_NAME = "gemini-3.5-flash-lite"
+MODEL = "gemini-3.5-flash"
 
 API_URL = (
-    f"https://generativelanguage.googleapis.com/"
-    f"v1beta/models/{MODEL_NAME}:generateContent"
+    "https://generativelanguage.googleapis.com/"
+    f"v1beta/models/{MODEL}:generateContent"
 )
 
 # =========================================================
@@ -36,9 +38,9 @@ st.markdown(
     .stApp {
         background: linear-gradient(
             135deg,
-            #dceeff 0%,
-            #f8f1df 50%,
-            #eaf6ff 100%
+            #dceeff,
+            #fff8e7,
+            #eaf6ff
         );
     }
 
@@ -50,21 +52,30 @@ st.markdown(
 
     .robot {
         text-align: center;
-        font-size: 60px;
-        animation: floating 3s ease-in-out infinite;
+        font-size: 58px;
+        animation: float 3s ease-in-out infinite;
     }
 
-    @keyframes floating {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-8px); }
-        100% { transform: translateY(0px); }
+    @keyframes float {
+        0% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-8px);
+        }
+
+        100% {
+            transform: translateY(0);
+        }
     }
 
     .title {
         text-align: center;
-        color: #172554;
         font-size: 42px;
         font-weight: 800;
+        color: #172554;
+        margin-bottom: 5px;
     }
 
     .subtitle {
@@ -75,21 +86,23 @@ st.markdown(
     }
 
     .welcome {
-        background: white;
+        background: rgba(255,255,255,0.9);
         border-radius: 20px;
         padding: 25px;
         text-align: center;
         margin-bottom: 25px;
-        box-shadow: 0 8px 25px rgba(30,64,175,0.10);
+        box-shadow: 0 8px 25px rgba(30,64,175,0.12);
     }
 
     .welcome h2 {
         color: #172554;
+        margin-bottom: 10px;
     }
 
     .welcome p {
         color: #475569;
         font-size: 16px;
+        line-height: 1.6;
     }
 
     [data-testid="stChatMessage"] {
@@ -104,7 +117,7 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] textarea {
-        background: white !important;
+        background-color: white !important;
         color: #172033 !important;
         border: 2px solid #93c5fd !important;
         border-radius: 15px !important;
@@ -162,7 +175,7 @@ st.markdown(
 )
 
 # =========================================================
-# WELCOME MESSAGE
+# WELCOME
 # =========================================================
 
 if not st.session_state.messages:
@@ -187,7 +200,9 @@ if not st.session_state.messages:
 if st.session_state.messages:
 
     if st.button("🗑️ Clear Chat"):
+
         st.session_state.messages = []
+
         st.rerun()
 
 # =========================================================
@@ -207,10 +222,10 @@ for message in st.session_state.messages:
             st.markdown(message["content"])
 
 # =========================================================
-# GEMINI FUNCTION
+# GEMINI API FUNCTION
 # =========================================================
 
-def ask_gemini(conversation):
+def get_gemini_response(messages):
 
     headers = {
         "Content-Type": "application/json",
@@ -219,9 +234,12 @@ def ask_gemini(conversation):
 
     contents = []
 
-    for message in conversation:
+    for message in messages:
 
-        role = "user" if message["role"] == "user" else "model"
+        if message["role"] == "user":
+            role = "user"
+        else:
+            role = "model"
 
         contents.append(
             {
@@ -245,27 +263,47 @@ def ask_gemini(conversation):
         timeout=60
     )
 
+    # -----------------------------------------------------
+    # API ERROR
+    # -----------------------------------------------------
+
     if response.status_code != 200:
 
         try:
             error_data = response.json()
-            error_message = error_data.get(
-                "error",
-                {}
-            ).get(
-                "message",
-                "Unknown API error"
+
+            error_message = (
+                error_data
+                .get("error", {})
+                .get("message", "Unknown Gemini API error")
             )
+
         except Exception:
+
             error_message = response.text
 
         raise Exception(
-            f"{response.status_code}: {error_message}"
+            f"HTTP {response.status_code}: {error_message}"
         )
+
+    # -----------------------------------------------------
+    # SUCCESS
+    # -----------------------------------------------------
 
     result = response.json()
 
-    return result["candidates"][0]["content"]["parts"][0]["text"]
+    try:
+
+        return (
+            result["candidates"][0]
+            ["content"]["parts"][0]["text"]
+        )
+
+    except Exception:
+
+        raise Exception(
+            "Gemini returned an unexpected response."
+        )
 
 
 # =========================================================
@@ -286,21 +324,23 @@ if user_input:
         }
     )
 
-    # Display user message
+    # Show user message
     with st.chat_message("user", avatar="👤"):
+
         st.markdown(user_input)
 
-    # Generate AI response
+    # Generate response
     with st.chat_message("assistant", avatar="🤖"):
 
         try:
 
-            answer = ask_gemini(
+            answer = get_gemini_response(
                 st.session_state.messages
             )
 
             st.markdown(answer)
 
+            # Save AI response
             st.session_state.messages.append(
                 {
                     "role": "assistant",
@@ -310,51 +350,16 @@ if user_input:
 
         except Exception as error:
 
-            error_text = str(error)
+            # IMPORTANT:
+            # Show the actual error instead of hiding it.
 
-            if "401" in error_text:
-
-                st.error(
-                    "🔐 API key problem. "
-                    "Please create a new Gemini API key."
-                )
-
-            elif "403" in error_text:
-
-                st.error(
-                    "🚫 Your API key does not have "
-                    "permission to use the Gemini API."
-                )
-
-            elif "404" in error_text:
-
-                st.error(
-                    "⚠️ The selected Gemini model is "
-                    "not available for this API key."
-                )
-
-            elif "429" in error_text:
-
-                st.warning(
-                    "⏳ API limit reached. "
-                    "Please wait and try again."
-                )
-
-            elif "503" in error_text:
-
-                st.warning(
-                    "⏳ Gemini is temporarily busy. "
-                    "Please try again."
-                )
-
-            else:
-
-                st.error(
-                    "❌ Something went wrong."
-                )
+            st.error(
+                f"❌ Gemini API Error:\n\n{error}"
+            )
 
             # Remove failed user message
             if st.session_state.messages:
+
                 st.session_state.messages.pop()
 
 # =========================================================
