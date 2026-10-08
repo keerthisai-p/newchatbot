@@ -18,7 +18,7 @@ st.set_page_config(
 # For testing, paste your NEW Gemini API key here.
 # Do NOT paste your API key into this chat.
 
-GEMINI_API_KEY = "PASTE_YOUR_NEW_API_KEY_HERE"
+GEMINI_API_KEY = "AQ.Ab8RN6KhbsEBSlEr6zJdyJieXXHlnMyAJkPXpGcdIUa53Eeuog"
 
 MODEL = "gemini-3.5-flash"
 
