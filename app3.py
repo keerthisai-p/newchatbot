@@ -1,8 +1,8 @@
 import streamlit as st
-from google import genai
+import requests
 
 # =========================================================
-# PAGE CONFIGURATION
+# PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -12,41 +12,34 @@ st.set_page_config(
 )
 
 # =========================================================
-# GOOGLE GEMINI API
+# API SETTINGS
 # =========================================================
 
-# Paste your NEW Google AI Studio API key here.
-# Never share your API key publicly.
-
-GOOGLE_API_KEY = "AQ.Ab8RN6KhbsEBSlEr6zJdyJieXXHlnMyAJkPXpGcdIUa53Eeuog"
+# Put your NEW Gemini API key here
+GEMINI_API_KEY = "PASTE_YOUR_NEW_API_KEY_HERE"
 
 MODEL_NAME = "gemini-3.5-flash-lite"
 
-client = genai.Client(
-    api_key=GOOGLE_API_KEY
+API_URL = (
+    f"https://generativelanguage.googleapis.com/"
+    f"v1beta/models/{MODEL_NAME}:generateContent"
 )
 
 # =========================================================
-# CUSTOM CSS
+# CSS
 # =========================================================
 
 st.markdown(
     """
     <style>
 
-    /* -------------------------------------------------
-       MAIN APPLICATION
-    ------------------------------------------------- */
-
     .stApp {
-        background:
-            linear-gradient(
-                135deg,
-                #dceeff 0%,
-                #f8f1df 50%,
-                #eaf6ff 100%
-            );
-        min-height: 100vh;
+        background: linear-gradient(
+            135deg,
+            #dceeff 0%,
+            #f8f1df 50%,
+            #eaf6ff 100%
+        );
     }
 
     .block-container {
@@ -55,130 +48,71 @@ st.markdown(
         padding-bottom: 5rem;
     }
 
-    /* -------------------------------------------------
-       HEADER
-    ------------------------------------------------- */
-
-    .robot-icon {
+    .robot {
         text-align: center;
         font-size: 60px;
-        margin-bottom: 0px;
-        animation: robotFloat 3s ease-in-out infinite;
+        animation: floating 3s ease-in-out infinite;
     }
 
-    @keyframes robotFloat {
-
-        0% {
-            transform: translateY(0px);
-        }
-
-        50% {
-            transform: translateY(-8px);
-        }
-
-        100% {
-            transform: translateY(0px);
-        }
+    @keyframes floating {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
     }
 
-    .main-title {
+    .title {
         text-align: center;
-        color: #172554 !important;
-        font-size: 42px !important;
-        font-weight: 800 !important;
-        margin-top: 0px;
-        margin-bottom: 5px;
+        color: #172554;
+        font-size: 42px;
+        font-weight: 800;
     }
 
     .subtitle {
         text-align: center;
-        color: #475569 !important;
-        font-size: 17px !important;
+        color: #475569;
+        font-size: 17px;
         margin-bottom: 25px;
     }
 
-    /* -------------------------------------------------
-       WELCOME CARD
-    ------------------------------------------------- */
-
-    .welcome-card {
-        background: rgba(255, 255, 255, 0.90);
-        border: 1px solid #d6e4f0;
+    .welcome {
+        background: white;
         border-radius: 20px;
         padding: 25px;
-        margin-bottom: 25px;
         text-align: center;
-        box-shadow: 0px 8px 25px rgba(30, 64, 175, 0.10);
+        margin-bottom: 25px;
+        box-shadow: 0 8px 25px rgba(30,64,175,0.10);
     }
 
-    .welcome-heading {
-        color: #172554 !important;
-        font-size: 23px !important;
-        font-weight: 700 !important;
-        margin-bottom: 10px;
+    .welcome h2 {
+        color: #172554;
     }
 
-    .welcome-description {
-        color: #475569 !important;
-        font-size: 16px !important;
-        line-height: 1.6;
+    .welcome p {
+        color: #475569;
+        font-size: 16px;
     }
-
-    /* -------------------------------------------------
-       CHAT AREA
-    ------------------------------------------------- */
 
     [data-testid="stChatMessage"] {
         border-radius: 18px;
-        padding: 12px;
         margin-bottom: 12px;
-        box-shadow: 0px 5px 15px rgba(15, 23, 42, 0.08);
     }
 
-    /* User message */
-    [data-testid="stChatMessage"]:has(
-        [data-testid="chatAvatarIcon-user"]
-    ) {
-        background: #dbeafe;
-    }
-
-    /* Assistant message */
-    [data-testid="stChatMessage"]:has(
-        [data-testid="chatAvatarIcon-assistant"]
-    ) {
-        background: #fff7df;
-    }
-
-    /* Chat text */
     [data-testid="stChatMessage"] p {
         color: #172033 !important;
         font-size: 16px !important;
         line-height: 1.6 !important;
     }
 
-    /* -------------------------------------------------
-       CHAT INPUT
-    ------------------------------------------------- */
-
-    [data-testid="stChatInput"] {
-        background: transparent !important;
-    }
-
     [data-testid="stChatInput"] textarea {
-        background: #ffffff !important;
+        background: white !important;
         color: #172033 !important;
         border: 2px solid #93c5fd !important;
         border-radius: 15px !important;
-        font-size: 16px !important;
     }
 
     [data-testid="stChatInput"] textarea::placeholder {
         color: #64748b !important;
     }
-
-    /* -------------------------------------------------
-       CLEAR BUTTON
-    ------------------------------------------------- */
 
     .stButton > button {
         width: 100%;
@@ -187,23 +121,12 @@ st.markdown(
         color: #172554 !important;
         border: 1px solid #93c5fd !important;
         font-weight: 700;
-        padding: 10px;
-        transition: 0.25s;
     }
 
-    .stButton > button:hover {
-        background: #bfdbfe !important;
-        transform: translateY(-2px);
-    }
-
-    /* -------------------------------------------------
-       FOOTER
-    ------------------------------------------------- */
-
-    .footer-text {
+    .footer {
         text-align: center;
-        color: #64748b !important;
-        font-size: 13px !important;
+        color: #64748b;
+        font-size: 13px;
         margin-top: 25px;
     }
 
@@ -219,44 +142,39 @@ st.markdown(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "interaction_id" not in st.session_state:
-    st.session_state.interaction_id = None
-
 # =========================================================
 # HEADER
 # =========================================================
 
 st.markdown(
-    '<div class="robot-icon">🤖</div>',
+    '<div class="robot">🤖</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="main-title">Keerthi\'s Chatbot</div>',
+    "<div class='title'>Keerthi's Chatbot</div>",
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="subtitle">Your friendly AI assistant ✨</div>',
+    "<div class='subtitle'>Your friendly AI assistant ✨</div>",
     unsafe_allow_html=True
 )
 
 # =========================================================
-# WELCOME CARD
+# WELCOME MESSAGE
 # =========================================================
 
 if not st.session_state.messages:
 
     st.markdown(
         """
-        <div class="welcome-card">
-            <div class="welcome-heading">
-                👋 Hello!
-            </div>
-            <div class="welcome-description">
+        <div class="welcome">
+            <h2>👋 Hello!</h2>
+            <p>
                 Welcome to Keerthi's Chatbot.<br>
                 Ask me anything and I'll try my best to help you!
-            </div>
+            </p>
         </div>
         """,
         unsafe_allow_html=True
@@ -269,33 +187,86 @@ if not st.session_state.messages:
 if st.session_state.messages:
 
     if st.button("🗑️ Clear Chat"):
-
         st.session_state.messages = []
-        st.session_state.interaction_id = None
-
         st.rerun()
 
 # =========================================================
-# DISPLAY PREVIOUS MESSAGES
+# DISPLAY CHAT HISTORY
 # =========================================================
 
 for message in st.session_state.messages:
 
     if message["role"] == "user":
 
-        with st.chat_message(
-            "user",
-            avatar="👤"
-        ):
+        with st.chat_message("user", avatar="👤"):
             st.markdown(message["content"])
 
     else:
 
-        with st.chat_message(
-            "assistant",
-            avatar="🤖"
-        ):
+        with st.chat_message("assistant", avatar="🤖"):
             st.markdown(message["content"])
+
+# =========================================================
+# GEMINI FUNCTION
+# =========================================================
+
+def ask_gemini(conversation):
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
+    }
+
+    contents = []
+
+    for message in conversation:
+
+        role = "user" if message["role"] == "user" else "model"
+
+        contents.append(
+            {
+                "role": role,
+                "parts": [
+                    {
+                        "text": message["content"]
+                    }
+                ]
+            }
+        )
+
+    data = {
+        "contents": contents
+    }
+
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json=data,
+        timeout=60
+    )
+
+    if response.status_code != 200:
+
+        try:
+            error_data = response.json()
+            error_message = error_data.get(
+                "error",
+                {}
+            ).get(
+                "message",
+                "Unknown API error"
+            )
+        except Exception:
+            error_message = response.text
+
+        raise Exception(
+            f"{response.status_code}: {error_message}"
+        )
+
+    result = response.json()
+
+    return result["candidates"][0]["content"]["parts"][0]["text"]
+
 
 # =========================================================
 # CHAT INPUT
@@ -305,16 +276,9 @@ user_input = st.chat_input(
     "Type your message here..."
 )
 
-# =========================================================
-# SEND MESSAGE
-# =========================================================
-
 if user_input:
 
-    # -----------------------------------------------------
-    # DISPLAY USER MESSAGE
-    # -----------------------------------------------------
-
+    # Save user message
     st.session_state.messages.append(
         {
             "role": "user",
@@ -322,62 +286,25 @@ if user_input:
         }
     )
 
-    with st.chat_message(
-        "user",
-        avatar="👤"
-    ):
+    # Display user message
+    with st.chat_message("user", avatar="👤"):
         st.markdown(user_input)
 
-    # -----------------------------------------------------
-    # GENERATE GEMINI RESPONSE
-    # -----------------------------------------------------
-
-    with st.chat_message(
-        "assistant",
-        avatar="🤖"
-    ):
+    # Generate AI response
+    with st.chat_message("assistant", avatar="🤖"):
 
         try:
 
-            # First message
-            if st.session_state.interaction_id is None:
+            answer = ask_gemini(
+                st.session_state.messages
+            )
 
-                interaction = client.interactions.create(
-                    model=MODEL_NAME,
-                    input=user_input
-                )
+            st.markdown(answer)
 
-            # Continue existing conversation
-            else:
-
-                interaction = client.interactions.create(
-                    model=MODEL_NAME,
-                    previous_interaction_id=(
-                        st.session_state.interaction_id
-                    ),
-                    input=user_input
-                )
-
-            # Save interaction ID
-            st.session_state.interaction_id = interaction.id
-
-            # Get generated text
-            assistant_response = interaction.output_text
-
-            if not assistant_response:
-
-                assistant_response = (
-                    "Sorry, I couldn't generate a response."
-                )
-
-            # Display response
-            st.markdown(assistant_response)
-
-            # Save response
             st.session_state.messages.append(
                 {
                     "role": "assistant",
-                    "content": assistant_response
+                    "content": answer
                 }
             )
 
@@ -385,55 +312,49 @@ if user_input:
 
             error_text = str(error)
 
-            # Authentication error
-            if (
-                "401" in error_text
-                or "UNAUTHENTICATED" in error_text
-            ):
+            if "401" in error_text:
 
                 st.error(
-                    "🔐 Authentication failed. "
-                    "Please check your Gemini API key."
+                    "🔐 API key problem. "
+                    "Please create a new Gemini API key."
                 )
 
-            # Model error
-            elif (
-                "404" in error_text
-                or "NOT_FOUND" in error_text
-            ):
+            elif "403" in error_text:
 
                 st.error(
-                    "⚠️ The Gemini model is not available "
-                    "for this API key or project."
+                    "🚫 Your API key does not have "
+                    "permission to use the Gemini API."
                 )
 
-            # Server busy
-            elif (
-                "503" in error_text
-                or "UNAVAILABLE" in error_text
-            ):
+            elif "404" in error_text:
+
+                st.error(
+                    "⚠️ The selected Gemini model is "
+                    "not available for this API key."
+                )
+
+            elif "429" in error_text:
+
+                st.warning(
+                    "⏳ API limit reached. "
+                    "Please wait and try again."
+                )
+
+            elif "503" in error_text:
 
                 st.warning(
                     "⏳ Gemini is temporarily busy. "
-                    "Please try again in a few seconds."
+                    "Please try again."
                 )
 
-            # Other errors
             else:
 
                 st.error(
-                    "❌ Something went wrong. "
-                    "Please check your internet connection, "
-                    "API key, and installed packages."
+                    "❌ Something went wrong."
                 )
 
             # Remove failed user message
-            if (
-                st.session_state.messages
-                and
-                st.session_state.messages[-1]["role"] == "user"
-            ):
-
+            if st.session_state.messages:
                 st.session_state.messages.pop()
 
 # =========================================================
@@ -441,8 +362,10 @@ if user_input:
 # =========================================================
 
 st.markdown(
-    '<div class="footer-text">'
-    'Powered by Google Gemini AI • Built with Streamlit 💙'
-    '</div>',
+    """
+    <div class="footer">
+        Powered by Google Gemini AI • Built with Streamlit 💙
+    </div>
+    """,
     unsafe_allow_html=True
 )
